@@ -21,7 +21,7 @@ x-app: &app
   build:
     context: .
   image: translator-backend:latest
-  env_file: [.env.docker]
+  env_file: [.env]
   networks: [translator-net]
   # Makes `host.docker.internal` resolve on Linux as well, so the containers can
   # reach a MySQL/RabbitMQ that is installed directly on the host.
