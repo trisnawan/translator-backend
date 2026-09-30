@@ -9,6 +9,11 @@ Dokumen ini adalah referensi lengkap untuk **programmer client** (memakai API
 translation + callback) dan **programmer frontend admin** (mengelola master data
 dan memantau hasil terjemahan).
 
+Dokumen terkait:
+
+- [DATABASE.md](./DATABASE.md) — skema database, konvensi penyimpanan, index, query referensi.
+- [LICENSE](./LICENSE) — lisensi MIT + kondisi "tidak boleh dijual-belikan".
+
 ---
 
 ## Daftar Isi
@@ -30,6 +35,7 @@ dan memantau hasil terjemahan).
 15. [Deploy dengan Docker](#15-deploy-dengan-docker)
 16. [Script Bantu & Testing](#16-script-bantu--testing)
 17. [Catatan Perilaku & Troubleshooting](#17-catatan-perilaku--troubleshooting)
+18. [Lisensi](#18-lisensi)
 
 ---
 
@@ -1000,6 +1006,9 @@ Untuk menambah model lain, cukup buat driver baru dengan prefix yang sama
 
 `DB_SYNCHRONIZE=false` — schema **hanya** diubah lewat migration.
 
+> Rincian lengkap skema (tipe kolom, index, relasi, query referensi, retensi data):
+> **[DATABASE.md](./DATABASE.md)**.
+
 | Perintah                                                              | Fungsi                                       |
 | --------------------------------------------------------------------- | -------------------------------------------- |
 | `npm run db:create`                                                   | membuat database bila belum ada              |
@@ -1022,55 +1031,140 @@ Untuk menambah model lain, cukup buat driver baru dengan prefix yang sama
 
 Semua id berjenis UUID disimpan sebagai `binary(16)` (UUIDv7 → urut secara
 kronologis sehingga ramah untuk index). API selalu menampilkan bentuk teksnya.
+Semua kolom waktu memakai `datetime(6)` berisi **UTC**, ditulis aplikasi secara
+eksplisit (tidak mengandalkan `NOW()` MySQL, lihat [DATABASE.md](./DATABASE.md)).
 
 ### Data seeder
 
 - `languages`: `id` (Bahasa Indonesia), `en` (English)
-- `drivers`: `gemini-3.8-flash` (active, free tier key — ganti sebelum production),
-  `api-google-translate` (inactive, belum ada key → isi lewat
-  `PUT /drivers/update/api-google-translate`)
+- `drivers`: `gemini-3.8-flash` (active, `max_rpm` 10 / `max_rpd` 250) dan
+  `api-google-translate` (inactive). Keduanya **belum punya `secret_key`** — isi
+  lewat `PUT /drivers/update/{ID}` (atau buat driver baru) sebelum dipakai, jika
+  tidak `POST /translate` akan menolak dengan `503 Driver "..." is not configured yet`.
 - `accounts`: admin & client (lihat [bagian 3](#3-instalasi--menjalankan-aplikasi))
 - `account_drivers`: kedua driver diberikan ke kedua akun
 - `account_keys`: 1 key per akun dengan `callback_url` `http://localhost:4000/callback`
+  (nilai `key_id` & `secret_key` hanya dicetak sekali oleh seeder)
 
 ---
 
 ## 15. Deploy dengan Docker
 
+Aplikasi dan infrastrukturnya sengaja dipisah menjadi **dua file compose**, supaya
+di production Anda bebas menentukan MySQL & RabbitMQ mau dipasang di mana:
+
+| File                       | Isi                                                                        | Wajib? |
+| -------------------------- | -------------------------------------------------------------------------- | ------ |
+| `docker-compose.infra.yml` | MySQL + RabbitMQ (volume `mysql-data` & `rabbitmq-data`)                   | tidak  |
+| `docker-compose.yml`       | API + worker, plus `migrate`/`seeder` (profile `tools`, dijalankan manual) | ya     |
+
+Kedua file memakai project & network yang sama (`translator-net`), jadi container
+API/worker tetap bisa mencapai MySQL/RabbitMQ lewat nama service `mysql` dan
+`rabbitmq` di `.env.docker`. Kalau layanannya **tidak** dijalankan via Docker,
+hapus saja ketergantungan itu dengan mengubah `DB_HOST` / `RABBITMQ_URL`.
+
+### Skenario A — MySQL & RabbitMQ di Docker
+
 ```bash
 # 1. Sesuaikan kredensial di .env.docker (JWT_SECRET, APP_ENCRYPTION_KEY, password DB/RabbitMQ)
+#    DB_HOST=mysql, RABBITMQ_URL=amqp://translator:translator_pass@rabbitmq:5672
 
-# 2. Build & jalankan MySQL + RabbitMQ + API + worker
+# 2. Jalankan MySQL + RabbitMQ, tunggu sampai keduanya healthy
+docker compose -f docker-compose.infra.yml up -d
+docker compose -f docker-compose.infra.yml ps
+
+# 3. Build & jalankan API + worker
 docker compose up -d --build
 
-# 3. Jalankan migration lalu seeder (sekali saja / setiap kali ada migration baru)
+# 4. Jalankan migration lalu seeder (sekali saja / setiap kali ada migration baru)
 docker compose run --rm migrate
 docker compose run --rm seeder
 ```
 
-Service yang tersedia:
+> Langkah 3 & 4 memakai file aplikasi saja, jadi Compose akan mencetak
+> `Found orphan containers ([translator-mysql translator-rabbitmq])` karena kedua
+> file berada dalam satu project. Peringatan itu normal, penjelasannya ada di
+> bagian catatan production di bawah.
 
-| Service              | Container           | Port host                  | Keterangan                                                |
-| -------------------- | ------------------- | -------------------------- | --------------------------------------------------------- |
-| `mysql`              | translator-mysql    | 3307 → 3306                | data tersimpan di volume `mysql-data`                     |
-| `rabbitmq`           | translator-rabbitmq | 5673 → 5672, 15673 → 15672 | management UI `http://localhost:15673`                    |
-| `api`                | translator-api      | 3000 → 3000                | `ENABLE_WORKER=false` (hanya melayani HTTP)               |
-| `worker`             | translator-worker   | –                          | `ENABLE_HTTP=false` (hanya consume queue, bisa di-scale)  |
-| `migrate` / `seeder` | –                   | –                          | profile `tools`, dijalankan manual (`docker compose run`) |
+### Skenario B — MySQL & RabbitMQ dipasang di OS server yang sama
+
+Install MySQL & RabbitMQ tanpa Docker, lalu arahkan container ke host:
+
+```env
+DB_HOST=host.docker.internal
+DB_PORT=3306
+DB_USERNAME=translator
+DB_PASSWORD=...
+RABBITMQ_URL=amqp://translator:...@host.docker.internal:5672
+```
 
 ```bash
-docker compose logs -f api worker        # memantau log
-docker compose up -d --scale worker=3    # menambah worker saat antrian padat
-docker compose down                      # stop
-docker compose down -v                   # stop + hapus volume (reset data!)
+docker compose up -d --build
+docker compose run --rm migrate
+docker compose run --rm seeder
+```
+
+> `host.docker.internal` dipetakan otomatis ke host lewat `extra_hosts` di
+> `docker-compose.yml`, jadi tetap jalan di Linux (bukan cuma Docker Desktop).
+> Pastikan MySQL listen di `0.0.0.0` (bukan hanya `127.0.0.1`) dan user-nya boleh
+> login dari luar (`'translator'@'%'`), begitu juga RabbitMQ (`listeners.tcp.default`).
+
+### Skenario C — MySQL & RabbitMQ di server lain / managed service
+
+`docker-compose.infra.yml` tidak dipakai; cukup isi `.env.docker` dengan host tujuan:
+
+```env
+DB_HOST=10.0.0.12            # atau rds.amazonaws.com, dst.
+DB_PORT=3306
+RABBITMQ_URL=amqp://user:pass@mq.contoh.com:5672
+```
+
+```bash
+docker compose up -d --build
+docker compose run --rm migrate
+docker compose run --rm seeder
+```
+
+Pastikan port 3306/5672 terbuka dari server aplikasi dan kredensialnya benar.
+
+### Service yang tersedia
+
+| File                       | Service              | Container           | Port host                  | Keterangan                                                |
+| -------------------------- | -------------------- | ------------------- | -------------------------- | --------------------------------------------------------- |
+| `docker-compose.infra.yml` | `mysql`              | translator-mysql    | 3307 → 3306                | data tersimpan di volume `mysql-data`                     |
+| `docker-compose.infra.yml` | `rabbitmq`           | translator-rabbitmq | 5673 → 5672, 15673 → 15672 | management UI `http://localhost:15673`                    |
+| `docker-compose.yml`       | `api`                | translator-api      | 3000 → 3000                | `ENABLE_WORKER=false` (hanya melayani HTTP)               |
+| `docker-compose.yml`       | `worker`             | _(nama otomatis)_   | –                          | `ENABLE_HTTP=false` (hanya consume queue, bisa di-scale)  |
+| `docker-compose.yml`       | `migrate` / `seeder` | –                   | –                          | profile `tools`, dijalankan manual (`docker compose run`) |
+
+```bash
+docker compose logs -f api worker                  # memantau log API & worker
+docker compose up -d --scale worker=3              # menambah worker saat antrian padat
+docker compose down                                # stop API + worker (infra tetap jalan)
+docker compose -f docker-compose.infra.yml down    # stop MySQL + RabbitMQ (data tetap ada)
+docker compose -f docker-compose.infra.yml down -v # stop + hapus volume (reset data!)
 ```
 
 Catatan production:
 
 - `NODE_ENV=production` membuat validasi menolak `JWT_SECRET` /
   `APP_ENCRYPTION_KEY` / `DB_PASSWORD` yang masih bernilai contoh.
+- API/worker tidak lagi `depends_on` MySQL/RabbitMQ (karena keduanya bisa berada
+  di luar compose): saat database belum siap, TypeORM mencoba ulang 30× @5 detik
+  lalu container di-restart otomatis sampai berhasil. Jalankan `migrate` setelah
+  MySQL benar-benar siap (`docker compose -f docker-compose.infra.yml ps`).
 - Jalankan `migrate` sebelum menaikkan versi API/worker.
 - Cookie token otomatis memakai flag `secure`, jadi API sebaiknya dilayani via HTTPS.
+- Kedua file memakai **project & network yang sama**, jadi menjalankan salah satu
+  file saat file lainnya sedang jalan akan memunculkan peringatan
+  `Found orphan containers ([translator-mysql translator-rabbitmq])`. Peringatan
+  itu normal (container yang jalan tidak dihapus) — **jangan** pakai
+  `--remove-orphans`, karena flag itu justru menghapus container stack lain. Untuk
+  output yang bersih, sebut kedua file sekaligus:
+  `docker compose -f docker-compose.infra.yml -f docker-compose.yml up -d`.
+- `docker compose down` hanya menghentikan service dari file yang disebut
+  (`docker compose down` = API + worker saja, MySQL/RabbitMQ tetap jalan), dan
+  volume `mysql-data` tidak ikut terhapus kecuali memakai `-v`.
 
 ---
 
@@ -1148,11 +1242,34 @@ validasi — akun tersebut dihapus kembali setelah selesai.
 
 ---
 
-## Lisensi
+## 18. Lisensi
 
-UNLICENSED — internal project.
+Proyek ini memakai **MIT License + satu kondisi tambahan**: kode boleh dipakai,
+dimodifikasi, dan dipublikasikan secara bebas (termasuk untuk keperluan komersial
+dan internal perusahaan), tetapi **tidak boleh dijual-belikan** sebagai produk.
+Menjual jasa/layanan turunan (implementasi, integrasi, kustomisasi, konsultasi,
+hosting, support) tetap **diperbolehkan**.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+Silakan baca teks lengkapnya di [LICENSE](./LICENSE) (termasuk ringkasan bahasa
+Indonesia yang tidak mengikat). Ringkasnya:
+
+|                                                                                                 | Boleh | Tidak boleh |
+| ----------------------------------------------------------------------------------------------- | ----- | ----------- |
+| Pakai (pribadi, internal, komersial)                                                            | ✅    |             |
+| Ubah / modifikasi                                                                               | ✅    |             |
+| Publikasikan / fork (dengan LICENSE utuh)                                                       | ✅    |             |
+| Jual jasa turunan: implementasi, integrasi, kustomisasi, konsultasi, training, hosting, support | ✅    |             |
+| Jalankan layanan translasi berbayar untuk pelanggan Anda                                        | ✅    |             |
+| Jual-belikan software ini (source code, lisensi/akses, bundle produk/template, reseller)        |       | ❌          |
+| Tawarkan aplikasi ini "apa adanya" sebagai layanan hosting tanpa nilai tambah                   |       | ❌          |
+| Hapus/ubah nota hak cipta dan file `LICENSE`                                                    |       | ❌          |
+
+> Karena ada kondisi tambahan tersebut, lisensi ini **bukan** open source menurut
+> definisi OSI/FSF, melainkan _source-available_. Untuk menjadikannya MIT murni,
+> hapus Part 2 pada file `LICENSE`.
+
+Hak cipta © 2026 Trisnawan. Dokumen lisensi bukan nasihat hukum; untuk kebutuhan
+komersial yang kompleks, konsultasikan dengan penasihat hukum Anda.
 
 If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
 

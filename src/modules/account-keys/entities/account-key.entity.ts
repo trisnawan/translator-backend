@@ -47,7 +47,7 @@ export class AccountKey {
   })
   callbackUrl!: string | null;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp', precision: 6 })
+  @CreateDateColumn({ name: 'created_at', type: 'datetime', precision: 6 })
   createdAt!: Date;
 
   @ManyToOne(() => Account, (account) => account.accountKeys, {

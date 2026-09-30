@@ -46,10 +46,11 @@ export class Account {
   @Column({ name: 'max_rpd', type: 'int', default: 0 })
   maxRpd!: number;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp', precision: 6 })
+  /** Written by the application in UTC (see the migration notes about DATETIME columns). */
+  @CreateDateColumn({ name: 'created_at', type: 'datetime', precision: 6 })
   createdAt!: Date;
 
-  @UpdateDateColumn({ name: 'updated_at', type: 'timestamp', precision: 6 })
+  @UpdateDateColumn({ name: 'updated_at', type: 'datetime', precision: 6 })
   updatedAt!: Date;
 
   @OneToMany(() => AccountDriver, (accountDriver) => accountDriver.account)

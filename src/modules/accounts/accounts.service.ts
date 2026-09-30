@@ -143,6 +143,10 @@ export class AccountsService {
       throw AppException.badRequest('Nothing to update');
     }
 
+    // `updated_at` is maintained by the application (in UTC) instead of by a
+    // MySQL `ON UPDATE CURRENT_TIMESTAMP` clause, see the DATETIME migration.
+    payload.updatedAt = new Date();
+
     await this.accountsRepository.update({ id }, payload);
 
     return this.toResponse(await this.findById(id));

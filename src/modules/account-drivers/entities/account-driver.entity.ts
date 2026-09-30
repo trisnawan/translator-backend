@@ -31,7 +31,7 @@ export class AccountDriver {
   @Column({ name: 'driver_id', type: 'varchar', length: 20 })
   driverId!: string;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp', precision: 6 })
+  @CreateDateColumn({ name: 'created_at', type: 'datetime', precision: 6 })
   createdAt!: Date;
 
   @ManyToOne(() => Account, (account) => account.accountDrivers, {

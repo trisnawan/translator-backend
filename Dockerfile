@@ -31,6 +31,9 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./package.json
 
+# The license has to travel with every distributed copy of the software.
+COPY LICENSE ./LICENSE
+
 # The application does not need to write anything on disk.
 USER node
 

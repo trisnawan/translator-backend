@@ -43,7 +43,7 @@ describe('Translator API (e2e)', () => {
       TEST_EMAIL,
     ]);
     await dataSource.query(
-      'INSERT INTO accounts (id, full_name, email, password, role, status, max_rpm, max_rpd, created_at, updated_at) VALUES (UNHEX(REPLACE(UUID(), "-", "")), ?, ?, ?, "client", "active", 0, 0, NOW(6), NOW(6))',
+      'INSERT INTO accounts (id, full_name, email, password, role, status, max_rpm, max_rpd, created_at, updated_at) VALUES (UNHEX(REPLACE(UUID(), "-", "")), ?, ?, ?, "client", "active", 0, 0, UTC_TIMESTAMP(6), UTC_TIMESTAMP(6))',
       ['E2E Spec', TEST_EMAIL, await hash(TEST_PASSWORD, 4)],
     );
   });

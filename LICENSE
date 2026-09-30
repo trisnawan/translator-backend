@@ -1,0 +1,136 @@
+MIT License + Additional Condition (No Resale of the Software)
+================================================================
+
+Copyright (c) 2026 Trisnawan
+
+---
+
+PART 1 — MIT LICENSE (base license, verbatim)
+------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+PART 2 — ADDITIONAL CONDITION: NO RESALE OF THE SOFTWARE
+------------------------------------------------------------------
+
+This condition is added by the copyright holder and applies to the permission
+to "sell" copies of the Software granted in Part 1. Where this condition and
+Part 1 conflict, this condition prevails. All other permissions of Part 1
+remain in full force.
+
+1. Definitions
+
+   "Software" means this project (translator-backend): its source code,
+   configuration, documentation and any accompanying files, including modified
+   versions, forks and works that are substantially the Software.
+
+   "Sell the Software" means providing the Software to third parties for a fee,
+   price, subscription or other commercial consideration where the value
+   transferred derives substantially from the Software itself, in particular:
+
+   (a) selling, reselling, licensing or sublicensing the Software (or a modified
+   version or a fork of it) as a product, template, starter kit, bundle or
+   downloadable/installable package;
+
+   (b) offering the Software (or a modified version or a fork of it) to third
+   parties as a hosted or managed service, where you do not add material
+   functionality of your own and the offering is, in substance, the
+   Software itself being resold as a service;
+
+   (c) granting third parties the right to do any of the above.
+
+2. Restriction
+
+   You may NOT Sell the Software. You may not remove the copyright notice, this
+   condition or the license text from any copy or substantial portion of the
+   Software.
+
+3. Permitted uses (expressly allowed)
+
+   Subject to the restriction above, you MAY, free of charge:
+
+   (a) use the Software for any purpose — personal, internal to an organization,
+   or commercial — and modify it as you see fit;
+
+   (b) copy, publish, share and redistribute the Software or your modified
+   version, in source or object form, provided this LICENSE file is kept
+   intact and unchanged together with the Software and the recipients are
+   bound by it;
+
+   (c) charge for your own products and services that are built on, integrate,
+   extend, customize or operate together with the Software — including
+   implementation, integration, customization, consulting, training,
+   hosting, deployment, support and maintenance services — as long as what
+   you charge for is your work or your own added functionality and not
+   merely the Software itself. For example: charging a client to deploy,
+   host, customize, support or integrate a translation service based on the
+   Software, or selling a product of yours that uses the Software as one of
+   several components alongside your own functionality;
+
+   (d) use the Software to run translation services for your own customers,
+   including paid services, as part of your own offering.
+
+4. Attribution
+
+   Any redistribution must keep the copyright notice of Part 1, this condition,
+   and the full text of this file. If you publish a modified version, please
+   state clearly that it has been modified and is not the original project.
+
+5. No trademark rights
+
+   This license does not grant any right to use the trade names, trademarks,
+   service marks or product names of the copyright holder.
+
+6. Warranty and liability
+
+   The disclaimer of warranty and the limitation of liability of Part 1 apply to
+   the whole of this license, including this condition.
+
+---
+
+PART 3 — RINGKASAN BAHASA INDONESIA (tidak mengikat / non-binding)
+------------------------------------------------------------------
+
+Bagian ini hanya ringkasan untuk memudahkan pemahaman. Teks yang mengikat
+adalah Part 1 dan Part 2 di atas.
+
+Yang BOLEH (gratis, tanpa izin tambahan):
+
+- Memakai aplikasi ini untuk keperluan apa pun, termasuk komersial dan
+  internal perusahaan.
+- Mengubah, memodifikasi, dan mengembangkan kode ini sesuai kebutuhan.
+- Mempublikasikan, membagikan, dan mem-fork source code ini ke publik
+  (asalkan file LICENSE ini tetap disertakan tanpa diubah).
+- Menjual jasa/layanan turunan: implementasi, integrasi, kustomisasi,
+  konsultasi, training, hosting, deployment, support dan maintenance.
+- Menjalankan layanan translasi berbayar untuk pelanggan Anda dengan
+  aplikasi ini sebagai mesinnya, sepanjang yang Anda jual adalah jasa/produk
+  Anda (bukan menjual ulang software-nya).
+
+Yang TIDAK BOLEH:
+
+- Menjual-belikan software ini sebagai produk: menjual source code-nya,
+  menjual lisensi/akses, membundel-nya sebagai produk/template/starter kit,
+  atau menjadi reseller software ini.
+- Menawarkan aplikasi ini "apa adanya" sebagai layanan hosting/managed tanpa
+  menambahkan fungsi atau nilai kerja Anda sendiri (menjual ulang software).
+- Menghapus atau mengubah nota hak cipta dan file LICENSE ini dari salinan
+  yang Anda distribusikan.

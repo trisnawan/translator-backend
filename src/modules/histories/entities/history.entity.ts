@@ -50,10 +50,10 @@ export class History {
   })
   status!: HistoryStatus;
 
-  /** When the API request was accepted. */
+  /** When the API request was accepted (UTC). */
   @Column({
     name: 'requested_at',
-    type: 'timestamp',
+    type: 'datetime',
     precision: 6,
     default: () => 'CURRENT_TIMESTAMP(6)',
   })
@@ -62,7 +62,7 @@ export class History {
   /** When the translation finished (successfully or not). */
   @Column({
     name: 'translated_at',
-    type: 'timestamp',
+    type: 'datetime',
     precision: 6,
     nullable: true,
   })
@@ -83,7 +83,7 @@ export class History {
   /** When the callback was delivered successfully. */
   @Column({
     name: 'callback_at',
-    type: 'timestamp',
+    type: 'datetime',
     precision: 6,
     nullable: true,
   })

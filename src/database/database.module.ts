@@ -29,6 +29,13 @@ import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
         logging: configService.getOrThrow<boolean>('database.logging')
           ? ['query', 'error', 'warn']
           : ['error'],
+        // The database may live in another container/server, so it is not
+        // guaranteed to be reachable the moment this process starts: retry for
+        // ~2 minutes before giving up (the container restart policy takes over
+        // if it is still unreachable).
+        retryAttempts: 30,
+        retryDelay: 5000,
+        verboseRetryLog: true,
         extra: {
           connectionLimit: configService.getOrThrow<number>(
             'database.connectionLimit',
