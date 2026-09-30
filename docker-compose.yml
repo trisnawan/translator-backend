@@ -1,0 +1,127 @@
+# Deployment stack: MySQL + RabbitMQ + API + worker.
+#
+#   docker compose up -d --build         -> start everything
+#   docker compose run --rm migrate      -> run the database migrations
+#   docker compose run --rm seeder       -> seed the initial data
+#
+# The values in `.env.docker` are used by the containers, keep the MySQL and
+# RabbitMQ credentials below in sync with that file.
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: translator-mysql
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      # Keep in sync with DB_USERNAME / DB_PASSWORD / DB_DATABASE of `.env.docker`.
+      MYSQL_ROOT_PASSWORD: translator_root_password
+      MYSQL_DATABASE: mdi_translator
+    ports:
+      # 3307 on the host so it does not clash with a local MySQL installation.
+      - '${DB_EXPOSED_PORT:-3307}:3306'
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'mysqladmin',
+          'ping',
+          '-h',
+          'localhost',
+          '-uroot',
+          '-ptranslator_root_password',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: translator-rabbitmq
+    restart: unless-stopped
+    environment:
+      # Keep in sync with the credentials of RABBITMQ_URL in `.env.docker`.
+      RABBITMQ_DEFAULT_USER: translator
+      RABBITMQ_DEFAULT_PASS: translator_pass
+    ports:
+      - '${RABBITMQ_EXPOSED_PORT:-5673}:5672'
+      - '${RABBITMQ_MANAGEMENT_PORT:-15673}:15672'
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # One shot container that brings the schema up to date before the app starts.
+  migrate:
+    build:
+      context: .
+    image: translator-backend:latest
+    profiles: ['tools']
+    env_file: [.env.docker]
+    command:
+      ['npx', 'typeorm', 'migration:run', '-d', 'dist/database/data-source.js']
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  seeder:
+    image: translator-backend:latest
+    profiles: ['tools']
+    env_file: [.env.docker]
+    command: ['node', 'dist/database/seeds/seed.js']
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  api:
+    build:
+      context: .
+    image: translator-backend:latest
+    container_name: translator-api
+    restart: unless-stopped
+    env_file: [.env.docker]
+    environment:
+      # The API only accepts requests, the worker container consumes the queues.
+      ENABLE_HTTP: 'true'
+      ENABLE_WORKER: 'false'
+    command: ['node', 'dist/main.js']
+    ports:
+      - '${APP_EXPOSED_PORT:-3000}:3000'
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:3000/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  worker:
+    image: translator-backend:latest
+    container_name: translator-worker
+    restart: unless-stopped
+    env_file: [.env.docker]
+    environment:
+      # Scale this service (`docker compose up -d --scale worker=3`) when the
+      # translation queue needs more throughput.
+      ENABLE_HTTP: 'false'
+      ENABLE_WORKER: 'true'
+    command: ['node', 'dist/worker.js']
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+volumes:
+  mysql-data:
+  rabbitmq-data:
