@@ -119,6 +119,8 @@ export class AccountKeysService {
     const key = await this.accountKeysRepository
       .createQueryBuilder('key')
       .addSelect('key.secretKey')
+      // Detail/update responses embed the account, like the list endpoint does.
+      .leftJoinAndSelect('key.account', 'account')
       .where('key.id = :id', { id: uuidToBuffer(id) })
       .getOne();
 
