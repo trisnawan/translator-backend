@@ -4,7 +4,7 @@
 # MySQL and RabbitMQ are intentionally NOT defined here: in production they may
 # run as containers (docker-compose.infra.yml), be installed on the operating
 # system of the same server, or live on another server entirely. Point DB_HOST
-# and RABBITMQ_URL in `.env.docker` to wherever they are and start this stack.
+# and RABBITMQ_URL in `.env` to wherever they are and start this stack.
 #
 #   docker compose up -d --build            -> start API + worker
 #   docker compose run --rm migrate         -> run the database migrations
@@ -54,11 +54,20 @@ services:
       # The API only accepts requests, the worker container consumes the queues.
       ENABLE_HTTP: 'true'
       ENABLE_WORKER: 'false'
+      # Inside the container the API ALWAYS listens on 3000, the port the
+      # mapping below forwards to. Without this override the app would also
+      # listen on APP_PORT from `.env` (e.g. 8080) while `host:8080 -> 3000`
+      # still pointed to an empty container port -> connection refused.
+      APP_PORT: '3000'
     command: ['node', 'dist/main.js']
     ports:
-      - '${APP_EXPOSED_PORT:-3000}:3000'
+      # Host side = APP_PORT (`.env`), container side is fixed at 3000.
+      - '${APP_PORT:-3000}:3000'
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://localhost:3000/health']
+      # 127.0.0.1, NOT `localhost`: in this alpine image `localhost` resolves to
+      # ::1 first while node binds IPv4 only -> the check fails with
+      # "connection refused". The port is the container internal one.
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3000/health']
       interval: 30s
       timeout: 5s
       retries: 3

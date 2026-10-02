@@ -164,7 +164,7 @@ konfigurasi container: `.env.docker`).
 | --------------- | ----------------------- | -------------------------------------------------------------------------------- |
 | `NODE_ENV`      | `development`           | `production` mengaktifkan validasi ketat (secret wajib diubah) & cookie `secure` |
 | `APP_VERSION`   | `1.0.0`                 | versi yang dilaporkan `GET /` dan `GET /health`                                  |
-| `APP_PORT`      | `3000`                  | port HTTP                                                                        |
+| `APP_PORT`      | `3000`                  | port HTTP (di Docker: port host, container tetap listen di 3000)                 |
 | `APP_URL`       | `http://localhost:3000` | dipakai untuk logging & info aplikasi                                            |
 | `APP_TIMEZONE`  | `Asia/Jakarta`          | label timezone pada response                                                     |
 | `ENABLE_HTTP`   | `true`                  | `false` → proses ini hanya menjalankan worker                                    |
@@ -1133,7 +1133,7 @@ Pastikan port 3306/5672 terbuka dari server aplikasi dan kredensialnya benar.
 | -------------------------- | -------------------- | ------------------- | -------------------------- | --------------------------------------------------------- |
 | `docker-compose.infra.yml` | `mysql`              | translator-mysql    | 3307 → 3306                | data tersimpan di volume `mysql-data`                     |
 | `docker-compose.infra.yml` | `rabbitmq`           | translator-rabbitmq | 5673 → 5672, 15673 → 15672 | management UI `http://localhost:15673`                    |
-| `docker-compose.yml`       | `api`                | translator-api      | 3000 → 3000                | `ENABLE_WORKER=false` (hanya melayani HTTP)               |
+| `docker-compose.yml`       | `api`                | translator-api      | `${APP_PORT}` → 3000       | `ENABLE_WORKER=false` (hanya melayani HTTP)               |
 | `docker-compose.yml`       | `worker`             | _(nama otomatis)_   | –                          | `ENABLE_HTTP=false` (hanya consume queue, bisa di-scale)  |
 | `docker-compose.yml`       | `migrate` / `seeder` | –                   | –                          | profile `tools`, dijalankan manual (`docker compose run`) |
 
@@ -1147,6 +1147,10 @@ docker compose -f docker-compose.infra.yml down -v # stop + hapus volume (reset 
 
 Catatan production:
 
+- Port host API mengikuti `APP_PORT` di `.env` (default `3000`), sedangkan di
+  dalam container API **selalu** listen di `3000` (nilai yang di-`EXPOSE`
+  Dockerfile). Jadi untuk mengakses di port lain cukup ubah `APP_PORT`
+  (mis. `APP_PORT=8080` → `http://localhost:8080`) tanpa mengubah compose.
 - `NODE_ENV=production` membuat validasi menolak `JWT_SECRET` /
   `APP_ENCRYPTION_KEY` / `DB_PASSWORD` yang masih bernilai contoh.
 - API/worker tidak lagi `depends_on` MySQL/RabbitMQ (karena keduanya bisa berada
